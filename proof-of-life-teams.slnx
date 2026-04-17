@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ProofOfLife.Teams.AppHost/ProofOfLife.Teams.AppHost.csproj" />
+    <Project Path="src/ProofOfLife.Teams.Web/ProofOfLife.Teams.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ProofOfLife.Teams.Web.Tests/ProofOfLife.Teams.Web.Tests.csproj" />
+  </Folder>
+</Solution>

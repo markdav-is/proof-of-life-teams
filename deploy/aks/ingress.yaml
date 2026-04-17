@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: proof-of-life-teams-web
+  namespace: proof-of-life-teams
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: proof-of-life-teams.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: proof-of-life-teams-web
+                port:
+                  number: 80
