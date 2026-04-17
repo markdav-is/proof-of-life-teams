@@ -1,0 +1,45 @@
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthStateProvider
+
+<div class="d-flex flex-column min-vh-100">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/">
+                <span class="me-2">&#128994;</span> Proof of Life
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Dashboard</NavLink>
+                    </li>
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/team">My Team</NavLink>
+                    </li>
+                </ul>
+                <div class="navbar-text text-white-50 small me-3">
+                    <span class="badge bg-secondary">@DateTime.UtcNow.ToString("ddd dd MMM yyyy") UTC</span>
+                </div>
+                <AuthorizeView>
+                    <Authorized>
+                        <span class="navbar-text text-white me-3">@context.User.Identity?.Name</span>
+                        <a class="btn btn-outline-light btn-sm" href="MicrosoftIdentity/Account/SignOut">Sign out</a>
+                    </Authorized>
+                    <NotAuthorized>
+                        <a class="btn btn-outline-light btn-sm" href="MicrosoftIdentity/Account/SignIn">Sign in</a>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow-1 container-fluid py-4">
+        @Body
+    </main>
+
+    <footer class="bg-light border-top py-2 text-center text-muted small">
+        Proof of Life &mdash; powered by Microsoft Teams Presence &amp; Microsoft Graph
+    </footer>
+</div>

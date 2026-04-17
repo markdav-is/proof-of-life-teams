@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.17/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.17",
+  "version": "1.0.0",
+  "id": "__BOT_APP_ID__",
+  "packageName": "com.yourorg.proofoflife",
+  "developer": {
+    "name": "Your Organisation",
+    "websiteUrl": "https://pol.yourdomain.com",
+    "privacyUrl": "https://pol.yourdomain.com/privacy",
+    "termsOfUseUrl": "https://pol.yourdomain.com/terms"
+  },
+  "name": {
+    "short": "Proof of Life",
+    "full": "Proof of Life — Presence Tracker"
+  },
+  "description": {
+    "short": "Records Teams activity for the agency presence dashboard.",
+    "full": "A silent background bot. Any activity you perform in Teams is recorded as presence on the Proof of Life dashboard. The bot does not read message content and never responds."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#0078d4",
+  "bots": [
+    {
+      "botId": "__BOT_APP_ID__",
+      "scopes": ["personal", "team", "groupchat"],
+      "isNotificationOnly": false,
+      "supportsFiles": false,
+      "commandLists": []
+    }
+  ],
+  "permissions": ["identity"],
+  "validDomains": [
+    "pol.yourdomain.com",
+    "pol-bot.yourdomain.com"
+  ]
+}

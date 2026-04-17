@@ -1,0 +1,27 @@
+@* Individual user presence card used in the org tree *@
+<div class="card mb-2 shadow-sm @(User.IsPresent ? "border-success" : "border-secondary")" style="max-width:420px">
+    <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+        <span class="fs-5" title="@(User.IsPresent ? "Present today" : "Not seen today")">
+            @(User.IsPresent ? "🟢" : "⚪")
+        </span>
+        <div class="flex-grow-1 overflow-hidden">
+            <div class="fw-semibold text-truncate">@User.DisplayName</div>
+            <div class="text-muted small text-truncate">@User.JobTitle @(string.IsNullOrEmpty(User.Department) ? "" : $"· {User.Department}")</div>
+        </div>
+        @if (User.IsPresent && User.LastSeenAt.HasValue)
+        {
+            <span class="badge bg-success-subtle text-success border border-success-subtle flex-shrink-0"
+                  title="Last seen @User.LastSeenAt.Value.ToString("HH:mm") UTC">
+                @User.LastSeenAt.Value.ToString("HH:mm")
+            </span>
+        }
+        else
+        {
+            <span class="badge bg-light text-muted border flex-shrink-0">—</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public OrgNodePresence User { get; set; } = default!;
+}

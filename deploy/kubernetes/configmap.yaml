@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proof-of-life-config
+  namespace: proof-of-life
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  # Tenant and client IDs (non-secret). Secrets live in the Secret object below.
+  AzureAd__Instance: "https://login.microsoftonline.com/"
+  AzureAd__TenantId: "__TENANT_ID__"
+  AzureAd__ClientId: "__API_CLIENT_ID__"       # API app registration
+  AzureAd__Audience: "api://__API_CLIENT_ID__"
+  Graph__TenantId: "__TENANT_ID__"
+  Graph__ClientId: "__API_CLIENT_ID__"
+  PresencePolling__IntervalMinutes: "30"
+  # Public HTTPS URL where Graph can POST webhook notifications.
+  # Must be reachable from the internet. Webhook__ClientState is a secret (see secrets.yaml).
+  Webhook__NotificationUrl: "https://pol-api.yourdomain.com/api/webhooks/graph"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proof-of-life-web-config
+  namespace: proof-of-life
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  AzureAd__Instance: "https://login.microsoftonline.com/"
+  AzureAd__TenantId: "__TENANT_ID__"
+  AzureAd__ClientId: "__WEB_CLIENT_ID__"        # Web app registration (separate)
+  AzureAd__CallbackPath: "/signin-oidc"
+  AzureAd__SignedOutCallbackPath: "/signout-oidc"
+  MicrosoftGraph__BaseUrl: "https://graph.microsoft.com/v1.0"
+  # Internal cluster service URL for the API
+  ApiBaseUrl: "http://proof-of-life-api-svc"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proof-of-life-bot-config
+  namespace: proof-of-life
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  MicrosoftAppType: "SingleTenant"
+  MicrosoftAppId: "__BOT_APP_ID__"
+  MicrosoftAppTenantId: "__TENANT_ID__"
+  # Internal URL — bot calls the API directly inside the cluster
+  ApiBaseUrl: "http://proof-of-life-api-svc"

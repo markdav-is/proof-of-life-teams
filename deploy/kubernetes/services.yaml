@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: proof-of-life-api-svc
+  namespace: proof-of-life
+  labels:
+    app: proof-of-life-api
+spec:
+  selector:
+    app: proof-of-life-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proof-of-life-web-svc
+  namespace: proof-of-life
+  labels:
+    app: proof-of-life-web
+spec:
+  selector:
+    app: proof-of-life-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proof-of-life-bot-svc
+  namespace: proof-of-life
+  labels:
+    app: proof-of-life-bot
+spec:
+  selector:
+    app: proof-of-life-bot
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+---
+# ServiceAccount for Workload Identity (avoids node-level credential sharing)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: proof-of-life-sa
+  namespace: proof-of-life
+  annotations:
+    azure.workload.identity/client-id: "__MANAGED_IDENTITY_CLIENT_ID__"
+  labels:
+    azure.workload.identity/use: "true"
