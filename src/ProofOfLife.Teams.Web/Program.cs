@@ -155,6 +155,63 @@ app.MapGet("/api/presence/raw", (HttpContext context, PresenceTracker tracker, I
     return Results.Ok(tracker.GetActiveTodayWithoutOrgData());
 });
 
+app.MapPost("/api/graph/presence-notification", async (HttpContext context, OrgChartService orgChart, PresenceTracker tracker, IConfiguration configuration) =>
+{
+    // Validation handshake: Graph POSTs with ?validationToken=<token> when a subscription
+    // is created or renewed and expects the exact token echoed back as text/plain.
+    var validationToken = context.Request.Query["validationToken"].ToString();
+    if (!string.IsNullOrEmpty(validationToken))
+    {
+        return Results.Content(validationToken, "text/plain");
+    }
+
+    GraphNotificationEnvelope? envelope;
+    try
+    {
+        envelope = await context.Request.ReadFromJsonAsync<GraphNotificationEnvelope>();
+    }
+    catch (Exception)
+    {
+        // Return 202 regardless so Graph does not retry malformed payloads.
+        return Results.Accepted();
+    }
+
+    if (envelope is null || envelope.Value.Length == 0)
+    {
+        return Results.Accepted();
+    }
+
+    var expectedClientState = configuration["GraphNotification:ClientState"];
+    if (string.IsNullOrWhiteSpace(expectedClientState))
+    {
+        // ClientState is not configured; ignore all notifications.
+        return Results.Accepted();
+    }
+
+    foreach (var notification in envelope.Value)
+    {
+        // clientState acts as a shared secret between the subscription creator and this
+        // endpoint, allowing us to reject notifications from unknown subscriptions.
+        if (!string.Equals(notification.ClientState, expectedClientState, StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        var upn = GraphNotificationHelper.ParseUpnFromResource(notification.Resource);
+        if (string.IsNullOrWhiteSpace(upn))
+        {
+            continue;
+        }
+
+        var department = orgChart.TryGetEmployee(upn)?.Department;
+        tracker.RecordPresence(upn, "teams-graph", department);
+    }
+
+    // Always return 202 Accepted so Graph does not retry notifications that were
+    // intentionally skipped (wrong clientState, unparseable resource, etc.).
+    return Results.Accepted();
+});
+
 app.Run();
 
 static bool IsApiKeyValid(HttpContext context, IConfiguration configuration)
