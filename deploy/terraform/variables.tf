@@ -63,6 +63,12 @@ variable "api_hostname" {
   default     = "pol-api.yourdomain.com"
 }
 
+variable "bot_hostname" {
+  description = "Public hostname for the Teams bot messaging endpoint"
+  type        = string
+  default     = "pol-bot.yourdomain.com"
+}
+
 variable "api_key" {
   description = "API key for external systems to call the presence API"
   type        = string

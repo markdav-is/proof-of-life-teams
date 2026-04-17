@@ -32,3 +32,16 @@ data:
   MicrosoftGraph__BaseUrl: "https://graph.microsoft.com/v1.0"
   # Internal cluster service URL for the API
   ApiBaseUrl: "http://proof-of-life-api-svc"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proof-of-life-bot-config
+  namespace: proof-of-life
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  MicrosoftAppType: "SingleTenant"
+  MicrosoftAppId: "__BOT_APP_ID__"
+  MicrosoftAppTenantId: "__TENANT_ID__"
+  # Internal URL — bot calls the API directly inside the cluster
+  ApiBaseUrl: "http://proof-of-life-api-svc"

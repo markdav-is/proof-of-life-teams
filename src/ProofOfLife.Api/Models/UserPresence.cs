@@ -15,6 +15,7 @@ public record UserPresence(
 public enum PresenceSource
 {
     TeamsGraph,
+    TeamsBot,
     ExternalApi,
     WindowsLogin,
     OfficeActivity

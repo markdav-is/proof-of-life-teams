@@ -22,7 +22,16 @@ public class PresenceService : IPresenceService
                 now,
                 now,
                 request.Source),
-            (_, existing) => existing with { LastSeenAt = now, Source = request.Source });
+            (_, existing) => existing with
+            {
+                LastSeenAt = now,
+                Source = request.Source,
+                // Later events can enrich metadata that earlier events (e.g. TeamsBot) lacked
+                DisplayName = Better(request.DisplayName, existing.DisplayName),
+                Email      = Better(request.Email,       existing.Email),
+                Department = Better(request.Department,  existing.Department),
+                JobTitle   = Better(request.JobTitle,    existing.JobTitle),
+            });
     }
 
     public bool IsPresent(string userId) => _present.ContainsKey(userId);
@@ -47,4 +56,8 @@ public class PresenceService : IPresenceService
     }
 
     public void Reset() => _present.Clear();
+
+    // Prefer a richer (non-empty, non-"Unknown") value; keep existing if incoming is blank
+    private static string Better(string incoming, string current) =>
+        !string.IsNullOrWhiteSpace(incoming) && incoming != "Unknown" ? incoming : current;
 }

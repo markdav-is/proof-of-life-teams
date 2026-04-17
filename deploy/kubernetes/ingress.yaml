@@ -22,6 +22,7 @@ spec:
     - hosts:
         - pol.yourdomain.com
         - pol-api.yourdomain.com
+        - pol-bot.yourdomain.com
       secretName: proof-of-life-tls
   rules:
     # Web frontend (Blazor) — sticky sessions required for SignalR
@@ -33,6 +34,18 @@ spec:
             backend:
               service:
                 name: proof-of-life-web-svc
+                port:
+                  number: 80
+    # Bot messaging endpoint — Azure Bot Service posts Teams activities here.
+    # Must be publicly reachable; no sticky sessions needed (stateless per-turn).
+    - host: pol-bot.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: proof-of-life-bot-svc
                 port:
                   number: 80
     # API — external systems post presence events here

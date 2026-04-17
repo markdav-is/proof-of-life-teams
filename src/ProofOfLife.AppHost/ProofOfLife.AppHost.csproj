@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ProofOfLife.Api\ProofOfLife.Api.csproj" />
+    <ProjectReference Include="..\ProofOfLife.Bot\ProofOfLife.Bot.csproj" />
     <ProjectReference Include="..\ProofOfLife.Web\ProofOfLife.Web.csproj" />
   </ItemGroup>
 

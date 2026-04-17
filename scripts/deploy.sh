@@ -21,6 +21,7 @@ MANAGED_IDENTITY_CLIENT_ID=$(terraform -chdir="$TF_DIR" output -raw workload_ide
 TENANT_ID=$(terraform -chdir="$TF_DIR" output -raw tenant_id)
 API_CLIENT_ID=$(terraform -chdir="$TF_DIR" output -raw api_client_id)
 WEB_CLIENT_ID=$(terraform -chdir="$TF_DIR" output -raw web_client_id)
+BOT_CLIENT_ID=$(terraform -chdir="$TF_DIR" output -raw bot_client_id)
 
 echo "==> Fetching AKS credentials for $AKS_CLUSTER"
 az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$AKS_CLUSTER" --overwrite-existing
@@ -36,6 +37,7 @@ apply_manifest() {
     -e "s|__TENANT_ID__|${TENANT_ID}|g" \
     -e "s|__API_CLIENT_ID__|${API_CLIENT_ID}|g" \
     -e "s|__WEB_CLIENT_ID__|${WEB_CLIENT_ID}|g" \
+    -e "s|__BOT_APP_ID__|${BOT_CLIENT_ID}|g" \
     -e "s|__MANAGED_IDENTITY_CLIENT_ID__|${MANAGED_IDENTITY_CLIENT_ID}|g" \
     "$file" | kubectl apply -f -
 }
@@ -61,6 +63,7 @@ fi
 
 echo "==> Applying deployments"
 apply_manifest "$K8S_DIR/api-deployment.yaml"
+apply_manifest "$K8S_DIR/bot-deployment.yaml"
 apply_manifest "$K8S_DIR/web-deployment.yaml"
 
 echo "==> Applying HPA"
@@ -71,6 +74,7 @@ kubectl apply -f "$K8S_DIR/ingress.yaml"
 
 echo "==> Waiting for rollouts"
 kubectl rollout status deployment/proof-of-life-api -n proof-of-life --timeout=120s
+kubectl rollout status deployment/proof-of-life-bot -n proof-of-life --timeout=120s
 kubectl rollout status deployment/proof-of-life-web -n proof-of-life --timeout=120s
 
 echo ""

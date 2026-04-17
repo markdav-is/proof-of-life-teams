@@ -45,9 +45,11 @@ build_and_push() {
 }
 
 build_and_push "proof-of-life-api" "$REPO_ROOT/src/ProofOfLife.Api/Dockerfile"
+build_and_push "proof-of-life-bot" "$REPO_ROOT/src/ProofOfLife.Bot/Dockerfile"
 build_and_push "proof-of-life-web" "$REPO_ROOT/src/ProofOfLife.Web/Dockerfile"
 
 echo ""
 echo "==> Done. Images pushed with tag: $IMAGE_TAG"
 echo "    API: ${ACR_LOGIN_SERVER}/proof-of-life-api:${IMAGE_TAG}"
+echo "    Bot: ${ACR_LOGIN_SERVER}/proof-of-life-bot:${IMAGE_TAG}"
 echo "    Web: ${ACR_LOGIN_SERVER}/proof-of-life-web:${IMAGE_TAG}"

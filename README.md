@@ -197,6 +197,95 @@ kubectl apply -f deploy/kubernetes/hpa.yaml
 
 ---
 
+## Teams Bot (ProofOfLife.Bot)
+
+A silent ASP.NET Core bot using the Bot Framework SDK. It receives activity events from Microsoft Teams and POSTs to the presence API — any Teams activity (message, reaction, Adaptive Card click, meeting join, etc.) counts as proof of life for that user.
+
+The bot never responds to users. It is purely observational.
+
+### How it works
+
+```
+User does anything in Teams
+  → Azure Bot Service receives the activity
+    → POST /api/messages on pol-bot.yourdomain.com
+      → PresenceBot.OnActivityAsync()
+        → POST /api/presence  (userId + displayName)
+          → IPresenceService.RecordPresence()
+```
+
+If the user's department/email aren't known yet (the bot only receives userId + displayName), the `PresenceService` stores what it has. When the Graph polling backstop or a Graph webhook fires later, the richer metadata is merged in automatically.
+
+### Local development
+
+In the Aspire AppHost the bot runs as a normal project alongside the API. For the Bot Framework authentication to work locally you need real Azure Bot Service credentials — the bot won't authenticate against the Bot Framework emulator without them.
+
+For local testing, use [Bot Framework Emulator](https://github.com/microsoft/BotFramework-Emulator):
+
+```bash
+# Set user secrets
+cd src/ProofOfLife.Bot
+dotnet user-secrets set "MicrosoftAppId"       "<bot-app-id>"
+dotnet user-secrets set "MicrosoftAppPassword" "<bot-app-password>"
+dotnet user-secrets set "MicrosoftAppTenantId" "<tenant-id>"
+dotnet user-secrets set "ApiKey"               "dev-secret-key-change-me"
+dotnet user-secrets set "ApiBaseUrl"           "https://localhost:7002"
+```
+
+### Deployment
+
+#### 1. Terraform — provisions Azure Bot Service + Teams channel
+
+```bash
+terraform -chdir=deploy/terraform apply \
+  -var="bot_hostname=pol-bot.yourdomain.com" \
+  ... (other vars)
+```
+
+This creates:
+- An Azure AD app registration for the bot
+- An Azure Bot Service (S1 SKU) pointing at your AKS ingress hostname
+- A Microsoft Teams channel attached to the bot service
+
+#### 2. Build and push the bot image
+
+```bash
+./scripts/build-and-push.sh   # builds api, bot, and web images
+```
+
+#### 3. Deploy to AKS
+
+```bash
+./scripts/deploy.sh           # deploys all three workloads + ingress
+```
+
+The bot gets its own hostname rule in the ingress (`pol-bot.yourdomain.com/api/messages`) and its own K8s deployment/service. No sticky sessions required — bot turns are stateless.
+
+#### 4. Package and deploy the Teams app manifest
+
+```bash
+./scripts/package-bot-manifest.sh
+# → produces proof-of-life-bot.zip
+```
+
+Then upload to Teams Admin Centre and configure a **Setup Policy** to pre-install for all users:
+
+1. [Teams Admin Centre](https://admin.teams.microsoft.com) → **Teams apps** → **Manage apps** → **Upload new app** → upload `proof-of-life-bot.zip`
+2. **Teams apps** → **Setup policies** → **Global (Org-wide default)** → **Add apps** → search "Proof of Life" → **Add** → **Save**
+
+Users will have the bot silently pre-installed — no action needed from them. The bot will receive a `conversationUpdate` for each user on installation, immediately recording them as present.
+
+### Coverage note
+
+Pre-installing in **personal scope** via admin setup policy is the recommended approach for full coverage. The bot receives events from:
+- Personal chats (direct messages to/from the bot)
+- Any team channel the bot is added to
+- Group chats where the bot is a member
+
+For channels and group chats, a Teams admin must add the bot as a member, or users can add it themselves. Personal scope pre-install via setup policy gives you coverage for every user's first daily Teams interaction.
+
+---
+
 ## Graph Change Notifications (Real-time Presence)
 
 `GraphSubscriptionService` registers one `communications/presences/{userId}` change notification subscription per user on startup, then renews them every 55 minutes (Graph's max is 60 min). When any user's Teams presence transitions to an active state, Graph POSTs to `/api/webhooks/graph` within seconds.

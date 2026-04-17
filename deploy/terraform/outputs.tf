@@ -38,3 +38,13 @@ output "aks_oidc_issuer_url" {
   description = "AKS OIDC issuer URL (for workload identity)"
   value       = azurerm_kubernetes_cluster.aks.oidc_issuer_url
 }
+
+output "bot_client_id" {
+  description = "Azure AD client ID for the bot app registration (use in Teams manifest)"
+  value       = azuread_application.bot.client_id
+}
+
+output "bot_service_name" {
+  description = "Azure Bot Service resource name"
+  value       = azurerm_bot_service_azure_bot.bot.name
+}
