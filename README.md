@@ -23,11 +23,11 @@ dotnet run --project ./src/ProofOfLife.Teams.Web/ProofOfLife.Teams.Web.csproj
 Sample development manager credentials configured in `appsettings.Development.json`:
 
 - Manager UPN: `amy.manager@agency.example`
-- Password: `Passw0rd!`
+- Password hash/salt values are preconfigured for local testing.
 
 ## Presence ingestion API
 
-Set `PresenceApi:ApiKey` (production default in `appsettings.json` is `REPLACE_WITH_STRONG_API_KEY`) and call:
+Set `PresenceApi:ApiKey` (required; production value should come from secure configuration such as environment variables or secret stores) and call:
 
 ```bash
 curl -X POST http://localhost:5059/api/presence/teams \

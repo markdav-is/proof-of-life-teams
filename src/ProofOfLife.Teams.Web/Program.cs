@@ -159,7 +159,12 @@ app.Run();
 
 static bool IsApiKeyValid(HttpContext context, IConfiguration configuration)
 {
-    var expected = configuration["PresenceApi:ApiKey"] ?? "local-dev-api-key";
+    var expected = configuration["PresenceApi:ApiKey"];
+    if (string.IsNullOrWhiteSpace(expected))
+    {
+        return false;
+    }
+
     var provided = context.Request.Headers["X-Api-Key"].ToString();
     return !string.IsNullOrWhiteSpace(provided) && string.Equals(expected, provided, StringComparison.Ordinal);
 }
