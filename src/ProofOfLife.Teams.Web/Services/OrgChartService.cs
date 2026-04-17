@@ -1,4 +1,6 @@
 using System.Collections.Frozen;
+using System.Security.Cryptography;
+using Microsoft.Extensions.Configuration;
 using ProofOfLife.Teams.Web.Models;
 
 namespace ProofOfLife.Teams.Web.Services;
@@ -15,18 +17,19 @@ public sealed class OrgChartService
         new("faye.contractor@agency.example", "Faye Contractor", "IT", "carol.supervisor@agency.example")
     ];
 
-    private static readonly FrozenDictionary<string, string> SeedManagerPasswords =
-        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["amy.manager@agency.example"] = "Passw0rd!",
-            ["brad.supervisor@agency.example"] = "Passw0rd!",
-            ["carol.supervisor@agency.example"] = "Passw0rd!"
-        }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
+    private sealed class ManagerCredential
+    {
+        public string Upn { get; init; } = string.Empty;
+        public string PasswordHash { get; init; } = string.Empty;
+        public string Salt { get; init; } = string.Empty;
+        public int Iterations { get; init; } = 100_000;
+    }
 
     private readonly FrozenDictionary<string, EmployeeProfile> _employeesByUpn;
     private readonly FrozenDictionary<string, string[]> _reportsByManager;
+    private readonly FrozenDictionary<string, ManagerCredential> _managerCredentialsByUpn;
 
-    public OrgChartService()
+    public OrgChartService(IConfiguration configuration)
     {
         var employeeList = SeedEmployees;
         _employeesByUpn = employeeList.ToFrozenDictionary(x => x.Upn, StringComparer.OrdinalIgnoreCase);
@@ -38,11 +41,44 @@ public sealed class OrgChartService
                 x => x.Key,
                 x => x.Select(y => y.Upn).ToArray(),
                 StringComparer.OrdinalIgnoreCase);
+
+        var managerCredentials = configuration.GetSection("ManagerAuth:Accounts")
+            .Get<ManagerCredential[]>() ?? [];
+        _managerCredentialsByUpn = managerCredentials
+            .Where(x => !string.IsNullOrWhiteSpace(x.Upn))
+            .ToFrozenDictionary(x => x.Upn, StringComparer.OrdinalIgnoreCase);
     }
 
-    public bool ValidateManagerCredentials(string upn, string password) =>
-        SeedManagerPasswords.TryGetValue(upn, out var stored) &&
-        string.Equals(stored, password, StringComparison.Ordinal);
+    public bool ValidateManagerCredentials(string upn, string password)
+    {
+        if (!_managerCredentialsByUpn.TryGetValue(upn, out var credential))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(credential.PasswordHash) || string.IsNullOrWhiteSpace(credential.Salt))
+        {
+            return false;
+        }
+
+        try
+        {
+            var saltBytes = Convert.FromBase64String(credential.Salt);
+            var expectedHash = Convert.FromBase64String(credential.PasswordHash);
+            var computedHash = Rfc2898DeriveBytes.Pbkdf2(
+                password,
+                saltBytes,
+                credential.Iterations <= 0 ? 100_000 : credential.Iterations,
+                HashAlgorithmName.SHA256,
+                expectedHash.Length);
+
+            return CryptographicOperations.FixedTimeEquals(computedHash, expectedHash);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
 
     public EmployeeProfile? TryGetEmployee(string upn) =>
         _employeesByUpn.GetValueOrDefault(upn);

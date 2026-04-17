@@ -20,14 +20,14 @@ a system for knowing who's logged-into teams today
 dotnet run --project /home/runner/work/proof-of-life-teams/proof-of-life-teams/src/ProofOfLife.Teams.Web/ProofOfLife.Teams.Web.csproj
 ```
 
-Login page defaults:
+Sample development manager credentials configured in `appsettings.Development.json`:
 
 - Manager UPN: `amy.manager@agency.example`
 - Password: `Passw0rd!`
 
 ## Presence ingestion API
 
-Set `PresenceApi:ApiKey` (default: `local-dev-api-key`) and call:
+Set `PresenceApi:ApiKey` (production default in `appsettings.json` is `REPLACE_WITH_STRONG_API_KEY`) and call:
 
 ```bash
 curl -X POST http://localhost:5059/api/presence/teams \

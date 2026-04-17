@@ -199,9 +199,9 @@ static string LoginPage(string? message)
       {notice}
       <form method='post' action='/login'>
         <label for='upn'>Manager UPN</label><br/>
-        <input type='email' id='upn' name='upn' value='amy.manager@agency.example' required/><br/><br/>
+        <input type='email' id='upn' name='upn' autocomplete='username' required/><br/><br/>
         <label for='password'>Password</label><br/>
-        <input type='password' id='password' name='password' value='Passw0rd!' required/><br/><br/>
+        <input type='password' id='password' name='password' autocomplete='current-password' required/><br/><br/>
         <button type='submit'>Login</button>
       </form>
       <p>External systems can post to <code>/api/presence/events</code> with <code>X-Api-Key</code>.</p>
