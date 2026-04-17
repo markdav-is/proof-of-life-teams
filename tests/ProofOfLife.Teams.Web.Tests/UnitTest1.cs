@@ -47,8 +47,8 @@ public class OrgChartServiceTests
         var settings = new Dictionary<string, string?>
         {
             ["ManagerAuth:Accounts:0:Upn"] = "manager@agency.example",
-            ["ManagerAuth:Accounts:0:PasswordHash"] = "XEYb7TKSiN4y+/TPyIF1NThWJLBbTFe3n1od27fJDus=",
-            ["ManagerAuth:Accounts:0:Salt"] = "B+aAG0PI0uTOG5cqq0uJZg==",
+            ["ManagerAuth:Accounts:0:PasswordHash"] = "Smj/ptNw9NE4DRvJt5WLdwVEjD8lgQr0I7MvJvzZlTI=",
+            ["ManagerAuth:Accounts:0:Salt"] = "V4yj9Jl8lt5zQjrORsaRwQ==",
             ["ManagerAuth:Accounts:0:Iterations"] = "100000"
         };
 

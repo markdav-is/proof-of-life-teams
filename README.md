@@ -17,7 +17,7 @@ a system for knowing who's logged-into teams today
 ## Local run
 
 ```bash
-dotnet run --project /home/runner/work/proof-of-life-teams/proof-of-life-teams/src/ProofOfLife.Teams.Web/ProofOfLife.Teams.Web.csproj
+dotnet run --project ./src/ProofOfLife.Teams.Web/ProofOfLife.Teams.Web.csproj
 ```
 
 Sample development manager credentials configured in `appsettings.Development.json`:
@@ -48,7 +48,7 @@ curl -X POST http://localhost:5059/api/presence/events \
 ## Aspire run
 
 ```bash
-dotnet run --project /home/runner/work/proof-of-life-teams/proof-of-life-teams/src/ProofOfLife.Teams.AppHost/ProofOfLife.Teams.AppHost.csproj
+dotnet run --project ./src/ProofOfLife.Teams.AppHost/ProofOfLife.Teams.AppHost.csproj
 ```
 
 ## AKS deployment
