@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proof-of-life-teams-web
+  namespace: proof-of-life-teams
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: proof-of-life-teams-web
+  template:
+    metadata:
+      labels:
+        app: proof-of-life-teams-web
+    spec:
+      containers:
+        - name: web
+          image: REPLACE_WITH_ACR/proof-of-life-teams-web:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_URLS
+              value: http://+:8080
+            - name: PresenceApi__ApiKey
+              valueFrom:
+                secretKeyRef:
+                  name: proof-of-life-teams-secrets
+                  key: presence-api-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proof-of-life-teams-web
+  namespace: proof-of-life-teams
+spec:
+  selector:
+    app: proof-of-life-teams-web
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
