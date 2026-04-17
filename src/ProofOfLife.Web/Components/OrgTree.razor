@@ -1,0 +1,30 @@
+@* Recursive org-tree component — renders a node and its children *@
+@if (Node.DirectReports.Count == 0 && Depth > 0)
+{
+    <div class="org-leaf ms-@(Depth * 3 > 12 ? 12 : Depth * 3)">
+        <UserCard User="Node" />
+    </div>
+}
+else
+{
+    <div class="org-node @(Depth > 0 ? $"ms-{Math.Min(Depth * 3, 12)}" : "")">
+        @if (Depth > 0)
+        {
+            <UserCard User="Node" />
+        }
+        @if (Node.DirectReports.Count > 0)
+        {
+            <div class="mt-2">
+                @foreach (var report in Node.DirectReports.OrderBy(r => r.Department).ThenBy(r => r.DisplayName))
+                {
+                    <OrgTree Node="report" Depth="@(Depth + 1)" />
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public OrgNodePresence Node { get; set; } = default!;
+    [Parameter] public int Depth { get; set; }
+}

@@ -1,0 +1,48 @@
+# Requires: NGINX ingress controller + cert-manager with a ClusterIssuer named 'letsencrypt-prod'
+# Install: https://kubernetes.github.io/ingress-nginx/
+#          https://cert-manager.io/docs/installation/
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: proof-of-life-ingress
+  namespace: proof-of-life
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    # Enable sticky sessions for Blazor Server SignalR connections
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "pol-affinity"
+    nginx.ingress.kubernetes.io/session-cookie-expires: "172800"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "172800"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - pol.yourdomain.com
+        - pol-api.yourdomain.com
+      secretName: proof-of-life-tls
+  rules:
+    # Web frontend (Blazor) — sticky sessions required for SignalR
+    - host: pol.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: proof-of-life-web-svc
+                port:
+                  number: 80
+    # API — external systems post presence events here
+    - host: pol-api.yourdomain.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: proof-of-life-api-svc
+                port:
+                  number: 80

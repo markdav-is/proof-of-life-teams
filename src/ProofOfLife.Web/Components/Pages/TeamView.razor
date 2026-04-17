@@ -1,0 +1,108 @@
+@page "/team"
+@attribute [Authorize]
+@inject PresenceApiClient ApiClient
+@inject Microsoft.Graph.GraphServiceClient GraphClient
+
+<PageTitle>My Team — Proof of Life</PageTitle>
+
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h1 class="h3 mb-0">My Team</h1>
+        <small class="text-muted">Org-chart presence for your downstream reports</small>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-primary btn-sm" @onclick="LoadAsync" disabled="@_loading">
+            @if (_loading) { <span class="spinner-border spinner-border-sm me-1"></span> }
+            Refresh
+        </button>
+    </div>
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+else if (_loading && _orgRoot is null)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+}
+else if (_orgRoot is not null)
+{
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="card border-primary shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title mb-1">@_orgRoot.DisplayName <small class="text-muted">(you)</small></h6>
+                    <small class="text-muted">@_orgRoot.JobTitle &mdash; @_orgRoot.Department</small>
+                    <div class="mt-2">
+                        <span class="badge @(_orgRoot.IsPresent ? "bg-success" : "bg-secondary")">
+                            @(_orgRoot.IsPresent ? "Present" : "Not seen today")
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8 d-flex align-items-center">
+            <div class="text-muted small">
+                Total downstream: <strong>@CountAll(_orgRoot)</strong> &nbsp;|&nbsp;
+                Present: <strong class="text-success">@CountPresent(_orgRoot)</strong> &nbsp;|&nbsp;
+                Not seen: <strong class="text-secondary">@(CountAll(_orgRoot) - CountPresent(_orgRoot))</strong>
+            </div>
+        </div>
+    </div>
+
+    <OrgTree Node="_orgRoot" Depth="0" />
+}
+
+@code {
+    private OrgNodePresence? _orgRoot;
+    private bool _loading = true;
+    private string? _error;
+    private string? _currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var me = await GraphClient.Me.GetAsync(cfg =>
+                cfg.QueryParameters.Select = ["id", "displayName", "jobTitle", "department"]);
+            _currentUserId = me?.Id;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not retrieve your profile: {ex.Message}";
+            _loading = false;
+            return;
+        }
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        if (_currentUserId is null) return;
+        _loading = true;
+        _error = null;
+        try
+        {
+            _orgRoot = await ApiClient.GetTransitiveReportsAsync(_currentUserId);
+            if (_orgRoot is null)
+                _error = "Could not load your org chart. Make sure you have direct reports.";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load team data: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static int CountAll(OrgNodePresence node) =>
+        node.DirectReports.Count + node.DirectReports.Sum(CountAll);
+
+    private static int CountPresent(OrgNodePresence node) =>
+        node.DirectReports.Count(r => r.IsPresent) + node.DirectReports.Sum(CountPresent);
+}

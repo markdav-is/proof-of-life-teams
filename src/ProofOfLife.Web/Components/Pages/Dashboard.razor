@@ -1,0 +1,166 @@
+@page "/"
+@attribute [Authorize]
+@inject PresenceApiClient ApiClient
+@implements IDisposable
+
+<PageTitle>Dashboard — Proof of Life</PageTitle>
+
+<div class="row mb-4 align-items-center">
+    <div class="col">
+        <h1 class="h3 mb-0">Agency Login Dashboard</h1>
+        <small class="text-muted">Today's presence by department &mdash; @DateTime.UtcNow.ToString("dddd, MMMM d yyyy")</small>
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-outline-primary btn-sm" @onclick="RefreshAsync" disabled="@_loading">
+            @if (_loading)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+            }
+            Refresh
+        </button>
+    </div>
+</div>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+else if (_loading && _departments is null)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary"></div>
+    </div>
+}
+else if (_departments is not null)
+{
+    <!-- Summary cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 bg-primary text-white shadow-sm">
+                <div class="card-body">
+                    <div class="small text-white-50 mb-1">Total Present Today</div>
+                    <div class="display-6 fw-bold">@_departments.Sum(d => d.PresentCount)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 bg-success text-white shadow-sm">
+                <div class="card-body">
+                    <div class="small text-white-50 mb-1">Departments Active</div>
+                    <div class="display-6 fw-bold">@_departments.Count</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 bg-info text-white shadow-sm">
+                <div class="card-body">
+                    <div class="small text-white-50 mb-1">Last Refreshed</div>
+                    <div class="fs-5 fw-semibold">@_lastRefreshed.ToString("HH:mm:ss") UTC</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="card border-0 bg-secondary text-white shadow-sm">
+                <div class="card-body">
+                    <div class="small text-white-50 mb-1">Search</div>
+                    <input class="form-control form-control-sm bg-transparent border-white text-white"
+                           placeholder="Filter name or dept..."
+                           @bind="_filter" @bind:event="oninput" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department cards -->
+    <div class="row g-3">
+        @foreach (var dept in FilteredDepartments)
+        {
+            <div class="col-md-6 col-xl-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">@dept.Department</span>
+                        <span class="badge bg-primary rounded-pill">@dept.PresentCount present</span>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+                            @foreach (var user in dept.PresentUsers
+                                .Where(u => string.IsNullOrEmpty(_filter) ||
+                                    u.DisplayName.Contains(_filter, StringComparison.OrdinalIgnoreCase) ||
+                                    u.Department.Contains(_filter, StringComparison.OrdinalIgnoreCase))
+                                .Take(15))
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+                                    <div>
+                                        <div class="small fw-medium">@user.DisplayName</div>
+                                        <div class="text-muted" style="font-size:0.75rem">@user.JobTitle</div>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill"
+                                          title="Last seen @user.LastSeenAt.ToString("HH:mm") UTC">
+                                        &#128994; @user.LastSeenAt.ToString("HH:mm")
+                                    </span>
+                                </li>
+                            }
+                            @if (dept.PresentCount > 15)
+                            {
+                                <li class="list-group-item text-center text-muted small py-1">
+                                    +@(dept.PresentCount - 15) more
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<DepartmentSummary>? _departments;
+    private bool _loading = true;
+    private string? _error;
+    private string _filter = "";
+    private DateTimeOffset _lastRefreshed;
+    private Timer? _refreshTimer;
+
+    private IEnumerable<DepartmentSummary> FilteredDepartments =>
+        _departments?.Where(d =>
+            string.IsNullOrEmpty(_filter) ||
+            d.Department.Contains(_filter, StringComparison.OrdinalIgnoreCase) ||
+            d.PresentUsers.Any(u => u.DisplayName.Contains(_filter, StringComparison.OrdinalIgnoreCase)))
+        ?? [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshAsync();
+        // Auto-refresh every 2 minutes
+        _refreshTimer = new Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await RefreshAsync();
+                StateHasChanged();
+            });
+        }, null, TimeSpan.FromMinutes(2), TimeSpan.FromMinutes(2));
+    }
+
+    private async Task RefreshAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _departments = await ApiClient.GetDepartmentSummaryAsync();
+            _lastRefreshed = DateTimeOffset.UtcNow;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load presence data: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    public void Dispose() => _refreshTimer?.Dispose();
+}
