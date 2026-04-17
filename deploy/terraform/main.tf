@@ -33,6 +33,14 @@ resource "random_string" "suffix" {
 }
 
 # Store secrets in Key Vault
+resource "azurerm_key_vault_secret" "webhook_client_state" {
+  name         = "WebhookClientState"
+  value        = var.webhook_client_state
+  key_vault_id = azurerm_key_vault.kv.id
+
+  depends_on = [azurerm_key_vault_access_policy.terraform_policy]
+}
+
 resource "azurerm_key_vault_secret" "api_key" {
   name         = "ApiKey"
   value        = var.api_key

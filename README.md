@@ -1,6 +1,6 @@
 # Proof of Life — Teams Presence Dashboard
 
-A .NET 9 Aspire application that shows who has logged into Microsoft Teams or used M365 today, broken down by department. Managers can see their full org-chart subtree. External systems can report presence via a simple API.
+A .NET 10 Aspire application that shows who has logged into Microsoft Teams or used M365 today, broken down by department. Managers can see their full org-chart subtree. External systems can report presence via a simple API.
 
 ---
 
@@ -9,17 +9,22 @@ A .NET 9 Aspire application that shows who has logged into Microsoft Teams or us
 ```
 ┌─────────────────────────────┐     ┌──────────────────────────────────┐
 │   ProofOfLife.Web           │     │   ProofOfLife.Api                │
-│   Blazor Server             │────▶│   ASP.NET Core Minimal API       │
-│   Azure AD / MSAL auth      │     │   Background: Graph poll every 5m│
-│   Manager org-chart view    │     │   In-memory presence store       │
-│   Department dashboard      │     │   API Key auth for externals     │
-└─────────────────────────────┘     └────────────────┬─────────────────┘
-                                                     │
+│   Blazor Server             │────▶│   ASP.NET Core Minimal API        │
+│   Azure AD / MSAL auth      │     │   Webhooks: real-time (seconds)   │
+│   Manager org-chart view    │     │   Backstop poll every 30 min      │
+│   Department dashboard      │     │   In-memory presence store        │
+└─────────────────────────────┘     └────────────────┬──────────────────┘
+                                                     │  subscriptions +
+                                                     │  change notifications
                                           ┌──────────▼──────────┐
                                           │  Microsoft Graph     │
                                           │  Presence.Read.All   │
                                           │  User.Read.All       │
                                           └─────────────────────┘
+                                              │ webhooks fire on
+                                              │ presence change (seconds)
+                                              ▼
+                                    POST /api/webhooks/graph
 
 External systems ──▶ POST /api/presence  (X-Api-Key header)
 Windows machines ──▶ LoginEventDetector.ps1 ──▶ POST /api/presence
@@ -192,6 +197,42 @@ kubectl apply -f deploy/kubernetes/hpa.yaml
 
 ---
 
+## Graph Change Notifications (Real-time Presence)
+
+`GraphSubscriptionService` registers one `communications/presences/{userId}` change notification subscription per user on startup, then renews them every 55 minutes (Graph's max is 60 min). When any user's Teams presence transitions to an active state, Graph POSTs to `/api/webhooks/graph` within seconds.
+
+**Flow:**
+1. App starts → fetch all users → create subscriptions in batches of 50
+2. Graph detects presence change → POST to `/api/webhooks/graph` (seconds later)
+3. Webhook handler verifies `clientState` → calls `IPresenceService.RecordPresence()`
+4. Backstop poll every 30 min catches any users missed during subscription lag
+5. Midnight reset clears the store; next poll/webhook repopulates it
+
+**Security:** every notification must carry `Webhook:ClientState` — a secret known only to your app and stored in Key Vault. Notifications with wrong/missing clientState are silently dropped.
+
+**Lifecycle events:** Graph sends `subscriptionRemoved` or `reauthorizationRequired` to the same endpoint when a subscription is forcibly removed. The handler drops the entry from the in-memory dict and the renewal loop recreates it on the next cycle.
+
+### Local development with webhooks
+
+Graph requires a public HTTPS endpoint to deliver notifications. In dev, use [VS Dev Tunnels](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/get-started):
+
+```bash
+devtunnel host --port 7002 --allow-anonymous
+# Copy the tunnel URL, then set:
+dotnet user-secrets set "Webhook:NotificationUrl" "https://<tunnel-id>.devtunnels.ms/api/webhooks/graph" --project src/ProofOfLife.Api
+dotnet user-secrets set "Webhook:ClientState" "$(uuidgen)" --project src/ProofOfLife.Api
+```
+
+Or with ngrok:
+```bash
+ngrok http 7002
+dotnet user-secrets set "Webhook:NotificationUrl" "https://<ngrok-id>.ngrok.io/api/webhooks/graph" --project src/ProofOfLife.Api
+```
+
+If `Webhook:NotificationUrl` is not set, the service logs a warning and falls back to polling-only mode — no error thrown.
+
+---
+
 ## Key Design Decisions
 
 | Decision | Rationale |
@@ -200,6 +241,10 @@ kubectl apply -f deploy/kubernetes/hpa.yaml
 | Reset at midnight UTC | `PresencePollingService` compares `DateOnly` to detect day rollover |
 | Dual auth (JWT + API key) | JWT for web UI, API key for external/Windows agents |
 | Presence sources | `TeamsGraph`, `ExternalApi`, `WindowsLogin`, `OfficeActivity` |
+| Webhook-first, poll as backstop | Subscriptions give seconds latency; 30-min poll catches stragglers |
+| Subscription lifetime 58 min | Graph max is 60 min; renew at 55 min gives 5-min safety margin |
+| clientState verification | Prevents spoofed notifications from arbitrary callers |
+| Singleton `GraphSubscriptionService` | Both background host and injected into webhook endpoint for user cache |
 | Blazor Server sticky sessions | Required for SignalR circuit; ingress affinity cookie configured |
 | AKS Workload Identity | No secret credentials on nodes; federated OIDC token exchange |
 

@@ -69,6 +69,12 @@ variable "api_key" {
   sensitive   = true
 }
 
+variable "webhook_client_state" {
+  description = "Secret token embedded in every Graph change notification subscription; verified on receipt"
+  type        = string
+  sensitive   = true
+}
+
 variable "api_client_secret" {
   description = "Azure AD client secret for the API app registration"
   type        = string

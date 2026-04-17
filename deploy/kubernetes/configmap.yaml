@@ -12,7 +12,10 @@ data:
   AzureAd__Audience: "api://__API_CLIENT_ID__"
   Graph__TenantId: "__TENANT_ID__"
   Graph__ClientId: "__API_CLIENT_ID__"
-  PresencePolling__IntervalMinutes: "5"
+  PresencePolling__IntervalMinutes: "30"
+  # Public HTTPS URL where Graph can POST webhook notifications.
+  # Must be reachable from the internet. Webhook__ClientState is a secret (see secrets.yaml).
+  Webhook__NotificationUrl: "https://pol-api.yourdomain.com/api/webhooks/graph"
 ---
 apiVersion: v1
 kind: ConfigMap

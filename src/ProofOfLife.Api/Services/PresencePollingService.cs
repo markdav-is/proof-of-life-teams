@@ -3,14 +3,18 @@ using ProofOfLife.Api.Models;
 namespace ProofOfLife.Api.Services;
 
 /// <summary>
-/// Background service that polls Teams presence every 5 minutes and resets the store at midnight.
+/// Backstop poller — runs every 30 minutes to catch any users missed by the real-time
+/// webhook path (e.g. during subscription creation lag or missed notifications).
+/// Primary presence detection is handled by GraphSubscriptionService webhooks.
 /// </summary>
 public class PresencePollingService(
     IGraphService graphService,
     IPresenceService presenceService,
+    IConfiguration config,
     ILogger<PresencePollingService> logger) : BackgroundService
 {
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(5);
+    private TimeSpan PollInterval =>
+        TimeSpan.FromMinutes(config.GetValue("PresencePolling:IntervalMinutes", 30));
     private DateOnly _lastResetDate = DateOnly.FromDateTime(DateTime.UtcNow);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
